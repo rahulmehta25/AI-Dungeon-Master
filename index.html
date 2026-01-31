@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Dungeon Master - Your Adventure Awaits</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=MedievalSharp&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+    <!-- Ambient Background Effects -->
+    <div class="ambient-bg">
+        <div class="particles" id="particles"></div>
+        <div class="vignette"></div>
+    </div>
+
+    <!-- Main Menu Screen -->
+    <div id="main-menu" class="screen active">
+        <div class="menu-container">
+            <div class="title-section">
+                <div class="title-decoration top"></div>
+                <h1 class="game-title">
+                    <span class="title-line">AI Dungeon</span>
+                    <span class="title-line accent">Master</span>
+                </h1>
+                <p class="tagline">Speak to the realm. Shape your destiny.</p>
+                <div class="title-decoration bottom"></div>
+            </div>
+            
+            <nav class="menu-buttons">
+                <button class="menu-btn primary" onclick="startNewGame()">
+                    <span class="btn-icon">⚔️</span>
+                    <span class="btn-text">New Adventure</span>
+                </button>
+                <button class="menu-btn" onclick="loadGame()" id="continue-btn">
+                    <span class="btn-icon">📜</span>
+                    <span class="btn-text">Continue Journey</span>
+                </button>
+                <button class="menu-btn" onclick="showSettings()">
+                    <span class="btn-icon">⚙️</span>
+                    <span class="btn-text">Settings</span>
+                </button>
+            </nav>
+
+            <div class="menu-footer">
+                <p class="version">v1.0 • Crafted with Magic</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Character Creation Screen -->
+    <div id="character-creation" class="screen">
+        <div class="creation-container">
+            <button class="back-btn" onclick="showScreen('main-menu')">← Back</button>
+            
+            <h2 class="section-title">Forge Your Hero</h2>
+            
+            <div class="creation-content">
+                <!-- Step 1: Name -->
+                <div class="creation-step" id="step-name">
+                    <div class="step-header">
+                        <span class="step-number">I</span>
+                        <h3>What shall you be called, adventurer?</h3>
+                    </div>
+                    <input type="text" id="char-name" class="fantasy-input" placeholder="Enter your name..." maxlength="30">
+                </div>
+
+                <!-- Step 2: Race -->
+                <div class="creation-step" id="step-race">
+                    <div class="step-header">
+                        <span class="step-number">II</span>
+                        <h3>Choose your lineage</h3>
+                    </div>
+                    <div class="option-grid" id="race-options">
+                        <div class="option-card" data-value="human">
+                            <div class="card-icon">👤</div>
+                            <h4>Human</h4>
+                            <p>Versatile and ambitious, humans adapt to any challenge.</p>
+                            <div class="card-stats">+1 All Stats</div>
+                        </div>
+                        <div class="option-card" data-value="elf">
+                            <div class="card-icon">🧝</div>
+                            <h4>Elf</h4>
+                            <p>Graceful and wise, with keen senses and ancient knowledge.</p>
+                            <div class="card-stats">+2 DEX, +1 WIS</div>
+                        </div>
+                        <div class="option-card" data-value="dwarf">
+                            <div class="card-icon">⛏️</div>
+                            <h4>Dwarf</h4>
+                            <p>Sturdy and resilient, masters of stone and steel.</p>
+                            <div class="card-stats">+2 CON, +1 STR</div>
+                        </div>
+                        <div class="option-card" data-value="halfling">
+                            <div class="card-icon">🍀</div>
+                            <h4>Halfling</h4>
+                            <p>Small but brave, blessed with uncanny luck.</p>
+                            <div class="card-stats">+2 DEX, +1 CHA</div>
+                        </div>
+                        <div class="option-card" data-value="dragonborn">
+                            <div class="card-icon">🐉</div>
+                            <h4>Dragonborn</h4>
+                            <p>Proud dragon-kin with breath weapon and scales.</p>
+                            <div class="card-stats">+2 STR, +1 CHA</div>
+                        </div>
+                        <div class="option-card" data-value="tiefling">
+                            <div class="card-icon">😈</div>
+                            <h4>Tiefling</h4>
+                            <p>Infernal heritage grants dark powers and charm.</p>
+                            <div class="card-stats">+2 CHA, +1 INT</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Class -->
+                <div class="creation-step" id="step-class">
+                    <div class="step-header">
+                        <span class="step-number">III</span>
+                        <h3>Select your calling</h3>
+                    </div>
+                    <div class="option-grid" id="class-options">
+                        <div class="option-card" data-value="warrior">
+                            <div class="card-icon">⚔️</div>
+                            <h4>Warrior</h4>
+                            <p>Master of martial combat and weapons.</p>
+                            <div class="card-stats">HP: High • Melee Expert</div>
+                        </div>
+                        <div class="option-card" data-value="mage">
+                            <div class="card-icon">🔮</div>
+                            <h4>Mage</h4>
+                            <p>Wielder of arcane magic and ancient spells.</p>
+                            <div class="card-stats">HP: Low • Spellcaster</div>
+                        </div>
+                        <div class="option-card" data-value="rogue">
+                            <div class="card-icon">🗡️</div>
+                            <h4>Rogue</h4>
+                            <p>Stealthy assassin skilled in deception.</p>
+                            <div class="card-stats">HP: Medium • Stealth</div>
+                        </div>
+                        <div class="option-card" data-value="cleric">
+                            <div class="card-icon">✨</div>
+                            <h4>Cleric</h4>
+                            <p>Divine champion blessed with healing power.</p>
+                            <div class="card-stats">HP: Medium • Healer</div>
+                        </div>
+                        <div class="option-card" data-value="ranger">
+                            <div class="card-icon">🏹</div>
+                            <h4>Ranger</h4>
+                            <p>Wilderness expert and deadly archer.</p>
+                            <div class="card-stats">HP: Medium • Ranged</div>
+                        </div>
+                        <div class="option-card" data-value="bard">
+                            <div class="card-icon">🎵</div>
+                            <h4>Bard</h4>
+                            <p>Charismatic performer with magical music.</p>
+                            <div class="card-stats">HP: Medium • Support</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Background -->
+                <div class="creation-step" id="step-background">
+                    <div class="step-header">
+                        <span class="step-number">IV</span>
+                        <h3>What is your story?</h3>
+                    </div>
+                    <div class="background-options" id="background-options">
+                        <div class="background-card" data-value="noble">
+                            <h4>👑 Noble</h4>
+                            <p>Born to privilege, you seek adventure beyond castle walls.</p>
+                        </div>
+                        <div class="background-card" data-value="soldier">
+                            <h4>🛡️ Soldier</h4>
+                            <p>War forged your skills. Peace left you restless.</p>
+                        </div>
+                        <div class="background-card" data-value="scholar">
+                            <h4>📚 Scholar</h4>
+                            <p>Knowledge is power. You seek forbidden truths.</p>
+                        </div>
+                        <div class="background-card" data-value="outlander">
+                            <h4>🌲 Outlander</h4>
+                            <p>Raised in the wilds, civilization is your new frontier.</p>
+                        </div>
+                        <div class="background-card" data-value="criminal">
+                            <h4>🎭 Criminal</h4>
+                            <p>Your past is shadowy. Your future is yours to write.</p>
+                        </div>
+                        <div class="background-card" data-value="acolyte">
+                            <h4>🙏 Acolyte</h4>
+                            <p>Devoted to the divine, you carry faith as your shield.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Character Summary -->
+                <div class="creation-step" id="step-summary">
+                    <div class="step-header">
+                        <span class="step-number">V</span>
+                        <h3>Your Legend Begins</h3>
+                    </div>
+                    <div class="character-summary">
+                        <div class="summary-portrait">
+                            <div class="portrait-frame">
+                                <span id="summary-icon">⚔️</span>
+                            </div>
+                        </div>
+                        <div class="summary-details">
+                            <h3 id="summary-name">Hero Name</h3>
+                            <p id="summary-info">Race • Class</p>
+                            <p id="summary-background">Background</p>
+                        </div>
+                        <div class="summary-stats" id="summary-stats">
+                            <!-- Stats will be populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="creation-nav">
+                <button class="nav-btn" id="prev-step" onclick="prevCreationStep()" disabled>
+                    ← Previous
+                </button>
+                <div class="step-indicators">
+                    <span class="step-dot active" data-step="1"></span>
+                    <span class="step-dot" data-step="2"></span>
+                    <span class="step-dot" data-step="3"></span>
+                    <span class="step-dot" data-step="4"></span>
+                    <span class="step-dot" data-step="5"></span>
+                </div>
+                <button class="nav-btn primary" id="next-step" onclick="nextCreationStep()">
+                    Next →
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="screen">
+        <div class="game-container">
+            <!-- Top Bar -->
+            <header class="game-header">
+                <div class="character-info">
+                    <div class="char-portrait" id="game-portrait">⚔️</div>
+                    <div class="char-details">
+                        <span class="char-name" id="game-char-name">Hero</span>
+                        <span class="char-class" id="game-char-class">Warrior</span>
+                    </div>
+                </div>
+                <div class="resource-bars">
+                    <div class="resource-bar hp-bar">
+                        <span class="bar-label">HP</span>
+                        <div class="bar-track">
+                            <div class="bar-fill" id="hp-fill" style="width: 100%"></div>
+                        </div>
+                        <span class="bar-value" id="hp-value">20/20</span>
+                    </div>
+                    <div class="resource-bar xp-bar">
+                        <span class="bar-label">XP</span>
+                        <div class="bar-track">
+                            <div class="bar-fill" id="xp-fill" style="width: 0%"></div>
+                        </div>
+                        <span class="bar-value" id="xp-value">0/100</span>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="icon-btn" onclick="toggleCharacterSheet()" title="Character Sheet">📋</button>
+                    <button class="icon-btn" onclick="saveGame()" title="Save Game">💾</button>
+                    <button class="icon-btn" onclick="showGameMenu()" title="Menu">☰</button>
+                </div>
+            </header>
+
+            <!-- Main Story Area -->
+            <main class="story-area">
+                <div class="story-scroll" id="story-scroll">
+                    <div class="story-content" id="story-content">
+                        <!-- Story text appears here -->
+                    </div>
+                </div>
+
+                <!-- Dice Roll Display -->
+                <div class="dice-display hidden" id="dice-display">
+                    <div class="dice-container">
+                        <div class="dice" id="dice-visual">🎲</div>
+                        <div class="dice-result" id="dice-result"></div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Input Area -->
+            <footer class="input-area">
+                <div class="input-container">
+                    <div class="quick-actions">
+                        <button class="quick-btn" onclick="quickAction('look around')">👁️ Look</button>
+                        <button class="quick-btn" onclick="quickAction('check inventory')">🎒 Inventory</button>
+                        <button class="quick-btn" onclick="rollDice(20)">🎲 Roll d20</button>
+                    </div>
+                    <div class="message-input">
+                        <textarea id="player-input" placeholder="What do you do? Speak to the Dungeon Master..." rows="1"></textarea>
+                        <button class="voice-btn" id="voice-btn" onclick="toggleVoiceInput()" title="Voice Input">
+                            🎤
+                        </button>
+                        <button class="send-btn" onclick="sendMessage()" title="Send">
+                            ➤
+                        </button>
+                    </div>
+                </div>
+            </footer>
+        </div>
+
+        <!-- Character Sheet Sidebar -->
+        <aside class="character-sheet hidden" id="character-sheet">
+            <div class="sheet-header">
+                <h3>Character Sheet</h3>
+                <button class="close-btn" onclick="toggleCharacterSheet()">×</button>
+            </div>
+            <div class="sheet-content">
+                <div class="sheet-portrait">
+                    <span id="sheet-icon">⚔️</span>
+                </div>
+                <h4 id="sheet-name">Hero Name</h4>
+                <p id="sheet-title">Human Warrior</p>
+                
+                <div class="stat-grid" id="sheet-stats">
+                    <!-- Stats populated by JS -->
+                </div>
+
+                <div class="inventory-section">
+                    <h5>Inventory</h5>
+                    <ul id="inventory-list">
+                        <li>Traveler's Pack</li>
+                        <li>50 Gold</li>
+                    </ul>
+                </div>
+
+                <div class="abilities-section">
+                    <h5>Abilities</h5>
+                    <div id="abilities-list">
+                        <!-- Abilities populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Game Menu Modal -->
+        <div class="modal hidden" id="game-menu-modal">
+            <div class="modal-content">
+                <h3>Game Menu</h3>
+                <div class="modal-buttons">
+                    <button class="modal-btn" onclick="saveGame()">💾 Save Game</button>
+                    <button class="modal-btn" onclick="loadGame()">📂 Load Game</button>
+                    <button class="modal-btn" onclick="showSettings()">⚙️ Settings</button>
+                    <button class="modal-btn danger" onclick="quitToMenu()">🚪 Quit to Menu</button>
+                </div>
+                <button class="modal-close" onclick="hideGameMenu()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Screen -->
+    <div id="settings-screen" class="screen">
+        <div class="settings-container">
+            <button class="back-btn" onclick="goBack()">← Back</button>
+            
+            <h2 class="section-title">Settings</h2>
+            
+            <div class="settings-content">
+                <div class="setting-group">
+                    <h4>Audio</h4>
+                    <div class="setting-item">
+                        <label>Music Volume</label>
+                        <input type="range" id="music-volume" min="0" max="100" value="50">
+                    </div>
+                    <div class="setting-item">
+                        <label>Sound Effects</label>
+                        <input type="range" id="sfx-volume" min="0" max="100" value="70">
+                    </div>
+                    <div class="setting-item">
+                        <label>Text-to-Speech</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="tts-enabled">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <h4>Display</h4>
+                    <div class="setting-item">
+                        <label>Theme</label>
+                        <select id="theme-select">
+                            <option value="dark">Dark Dungeon</option>
+                            <option value="parchment">Ancient Parchment</option>
+                            <option value="midnight">Midnight Blue</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>Text Size</label>
+                        <select id="text-size">
+                            <option value="small">Small</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="large">Large</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>Animations</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="animations-enabled" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <h4>Gameplay</h4>
+                    <div class="setting-item">
+                        <label>Difficulty</label>
+                        <select id="difficulty">
+                            <option value="story">Story Mode</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="hard">Hardcore</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>Auto-Save</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="autosave-enabled" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="setting-group danger-zone">
+                    <h4>Data</h4>
+                    <button class="danger-btn" onclick="clearAllData()">🗑️ Clear All Save Data</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="screen">
+        <div class="loading-content">
+            <div class="loading-spinner">
+                <div class="spinner-ring"></div>
+                <div class="spinner-icon">🐉</div>
+            </div>
+            <p class="loading-text" id="loading-text">Summoning the Dungeon Master...</p>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="js/storage.js"></script>
+    <script src="js/character.js"></script>
+    <script src="js/combat.js"></script>
+    <script src="js/dungeon-master.js"></script>
+    <script src="js/voice.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
