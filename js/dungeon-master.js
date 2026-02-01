@@ -11,6 +11,14 @@ const DungeonMaster = {
     // NPC tracking
     activeNPCs: [],
     
+    // AI Backend Configuration
+    apiEndpoint: 'http://localhost:3001/api',
+    useAI: true, // Toggle for AI-powered responses
+    
+    // Conversation context (last 10 messages)
+    conversationHistory: [],
+    maxHistoryLength: 10,
+    
     // Narrative templates
     scenes: {
         intro: {
@@ -87,6 +95,93 @@ const DungeonMaster = {
     },
 
     // ========================================
+    // AI Backend Integration
+    // ========================================
+    
+    // Add message to conversation history
+    addToConversationHistory(role, content) {
+        this.conversationHistory.push({ role, content });
+        
+        // Keep only last N messages
+        if (this.conversationHistory.length > this.maxHistoryLength) {
+            this.conversationHistory = this.conversationHistory.slice(-this.maxHistoryLength);
+        }
+    },
+    
+    // Clear conversation history (e.g., on new game)
+    clearConversationHistory() {
+        this.conversationHistory = [];
+    },
+    
+    // Call AI backend for dynamic response
+    async callAI(playerInput) {
+        try {
+            const response = await fetch(`${this.apiEndpoint}/dm/respond`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    playerInput,
+                    context: {
+                        history: this.conversationHistory,
+                        currentScene: this.currentScene,
+                        mood: this.mood,
+                        currentEnemy: Combat.currentEnemy
+                    },
+                    character: Character.current,
+                    gameState: Storage.getGameState()
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.response) {
+                return { success: true, response: data.response };
+            } else {
+                return { success: false, error: data.error };
+            }
+        } catch (error) {
+            console.warn('AI backend unavailable:', error.message);
+            return { success: false, error: error.message };
+        }
+    },
+    
+    // Call AI for combat narration
+    async callAICombat(combatData) {
+        try {
+            const response = await fetch(`${this.apiEndpoint}/dm/combat`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(combatData)
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.narration) {
+                return data.narration;
+            }
+            return null;
+        } catch (error) {
+            console.warn('AI combat narration unavailable:', error.message);
+            return null;
+        }
+    },
+    
+    // Check if AI backend is available
+    async checkAIHealth() {
+        try {
+            const response = await fetch(`${this.apiEndpoint}/health`);
+            const data = await response.json();
+            return data.status === 'ok' && data.hasApiKey;
+        } catch (error) {
+            return false;
+        }
+    },
+
+    // ========================================
     // Narrative Generation
     // ========================================
     async generateResponse(playerInput) {
@@ -94,50 +189,84 @@ const DungeonMaster = {
         const character = Character.current;
         const gameState = Storage.getGameState();
 
-        // Parse intent
+        // Add player input to conversation history
+        this.addToConversationHistory('user', playerInput);
+
+        // Parse intent for special handlers (inventory, dice rolls, etc.)
         const intent = this.parseIntent(input);
         
-        // Generate appropriate response
+        // Some actions should use local handlers for game mechanics
         let response;
+        let useLocalHandler = false;
+        
         switch (intent.type) {
-            case 'look':
-                response = this.describeSurroundings();
-                break;
-            case 'talk':
-                response = this.handleDialogue(intent.target, input);
-                break;
-            case 'move':
-                response = this.handleMovement(intent.target);
-                break;
-            case 'attack':
-                response = await this.handleCombat(intent.target);
-                break;
             case 'inventory':
+                // Always use local - just displays data
                 response = this.showInventory();
-                break;
-            case 'rest':
-                response = this.handleRest();
-                break;
-            case 'search':
-                response = await this.handleSearch();
-                break;
-            case 'use':
-                response = this.handleUseItem(intent.target);
+                useLocalHandler = true;
                 break;
             case 'roll':
+                // Always use local - dice mechanics
                 response = await this.handleDiceRoll(intent.target);
+                useLocalHandler = true;
                 break;
-            default:
-                response = this.handleFreeformAction(input);
+            case 'move':
+                // Use local for game state, but can enhance with AI
+                response = this.handleMovement(intent.target);
+                useLocalHandler = true;
+                break;
+            case 'attack':
+                // Combat uses local mechanics but AI narration
+                response = await this.handleCombat(intent.target);
+                useLocalHandler = true;
+                break;
+            case 'use':
+                // Item mechanics are local
+                response = this.handleUseItem(intent.target);
+                useLocalHandler = true;
+                break;
         }
+        
+        // For narrative actions, try AI first
+        if (!useLocalHandler && this.useAI) {
+            const aiResult = await this.callAI(playerInput);
+            
+            if (aiResult.success) {
+                response = aiResult.response;
+            } else {
+                // Fall back to local handlers
+                response = await this.handleWithLocalFallback(intent, input);
+            }
+        } else if (!useLocalHandler) {
+            response = await this.handleWithLocalFallback(intent, input);
+        }
+        
+        // Add DM response to conversation history
+        this.addToConversationHistory('assistant', response);
 
-        // Save to history
+        // Save to story history
         Storage.addToStoryHistory({
             type: 'dm',
             text: response
         });
 
         return response;
+    },
+    
+    // Handle with local fallback methods
+    async handleWithLocalFallback(intent, input) {
+        switch (intent.type) {
+            case 'look':
+                return this.describeSurroundings();
+            case 'talk':
+                return this.handleDialogue(intent.target, input);
+            case 'rest':
+                return this.handleRest();
+            case 'search':
+                return await this.handleSearch();
+            default:
+                return this.handleFreeformAction(input);
+        }
     },
 
     parseIntent(input) {

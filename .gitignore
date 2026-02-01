@@ -1,0 +1,11 @@
+.vercel
+
+# Dependencies
+node_modules/
+
+# Environment variables (contains API keys)
+.env
+server/.env
+
+# OS files
+.DS_Store
