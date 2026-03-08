@@ -14,7 +14,10 @@
 <body>
     <!-- Ambient Background Effects -->
     <div class="ambient-bg">
+        <div class="aurora-layer"></div>
+        <div class="mist-layer"></div>
         <div class="particles" id="particles"></div>
+        <div class="rune-ring"></div>
         <div class="vignette"></div>
     </div>
 
@@ -36,6 +39,10 @@
                     <span class="btn-icon">⚔️</span>
                     <span class="btn-text">New Adventure</span>
                 </button>
+                <button class="menu-btn" id="menu-audio-toggle" onclick="toggleAudio()">
+                    <span class="btn-icon" id="menu-audio-icon">🔇</span>
+                    <span class="btn-text" id="menu-audio-label">Ambient Audio Off</span>
+                </button>
                 <button class="menu-btn" onclick="loadGame()" id="continue-btn">
                     <span class="btn-icon">📜</span>
                     <span class="btn-text">Continue Journey</span>
@@ -47,7 +54,7 @@
             </nav>
 
             <div class="menu-footer">
-                <p class="version">v1.0 • Crafted with Magic</p>
+                <p class="version">v2.0 • Cinematic Edition</p>
             </div>
         </div>
     </div>
@@ -216,6 +223,7 @@
                             <!-- Stats will be populated by JS -->
                         </div>
                     </div>
+                    <p class="preview-hint">Cinematic story preview auto-starts when you begin your adventure.</p>
                 </div>
             </div>
 
@@ -232,6 +240,67 @@
                 </div>
                 <button class="nav-btn primary" id="next-step" onclick="nextCreationStep()">
                     Next →
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Story Preview Screen -->
+    <div id="story-preview-screen" class="screen">
+        <div class="preview-container">
+            <div class="preview-header">
+                <div class="preview-title-wrap">
+                    <span class="preview-kicker">Cinematic Sequence</span>
+                    <h2 class="section-title">Story Preview</h2>
+                    <p id="preview-subtitle">A fatebound prologue unfolds.</p>
+                </div>
+                <div class="preview-header-actions">
+                    <button class="nav-btn" onclick="replayStoryPreview()">↻ Replay</button>
+                    <button class="nav-btn" onclick="enterAdventureFromPreview()">Skip →</button>
+                </div>
+            </div>
+
+            <div class="preview-grid">
+                <section class="preview-panel preview-narrative-panel">
+                    <h3>Opening Narrative</h3>
+                    <div class="preview-typewriter" id="preview-typewriter"></div>
+                    <div class="preview-log" id="preview-log"></div>
+                </section>
+
+                <aside class="preview-side-panel">
+                    <section class="preview-panel preview-dice-panel">
+                        <h3>Stat Checks</h3>
+                        <div class="preview-dice-arena">
+                            <div class="preview-d20" id="preview-d20">🎲</div>
+                            <div class="preview-dice-result" id="preview-dice-result">d20 ready</div>
+                        </div>
+                        <div class="preview-dice-feed" id="preview-dice-feed"></div>
+                    </section>
+
+                    <section class="preview-panel preview-combat-panel">
+                        <h3>Combat Tracker</h3>
+                        <div class="preview-combatant hero" id="preview-hero-card">
+                            <div class="combatant-name" id="preview-hero-name">Hero</div>
+                            <div class="combatant-bar">
+                                <div class="combatant-fill hero" id="preview-hero-hp-fill"></div>
+                            </div>
+                            <div class="combatant-hp" id="preview-hero-hp-text">0 / 0 HP</div>
+                        </div>
+                        <div class="preview-combatant enemy" id="preview-enemy-card">
+                            <div class="combatant-name" id="preview-enemy-name">Nightfang Wraith</div>
+                            <div class="combatant-bar">
+                                <div class="combatant-fill enemy" id="preview-enemy-hp-fill"></div>
+                            </div>
+                            <div class="combatant-hp" id="preview-enemy-hp-text">0 / 0 HP</div>
+                        </div>
+                        <div class="preview-turn-feed" id="preview-turn-feed"></div>
+                    </section>
+                </aside>
+            </div>
+
+            <div class="preview-footer">
+                <button class="nav-btn primary" id="preview-enter-btn" onclick="enterAdventureFromPreview()" disabled>
+                    Enter Live Adventure
                 </button>
             </div>
         </div>
@@ -266,9 +335,11 @@
                     </div>
                 </div>
                 <div class="header-actions">
+                    <button class="icon-btn" onclick="toggleQuestJournal()" title="Quest Journal">📜</button>
                     <button class="icon-btn" onclick="toggleCharacterSheet()" title="Character Sheet">📋</button>
                     <button class="icon-btn" onclick="saveGame()" title="Save Game">💾</button>
                     <button class="icon-btn" onclick="showGameMenu()" title="Menu">☰</button>
+                    <button class="icon-btn" id="audio-toggle-btn" onclick="toggleAudio()" title="Toggle Audio">🔇</button>
                 </div>
             </header>
 
@@ -344,11 +415,23 @@
             </div>
         </aside>
 
+        <!-- Quest Journal Sidebar -->
+        <aside class="quest-journal-sidebar hidden" id="quest-journal-sidebar">
+            <div class="sheet-header">
+                <h3>Quest Journal</h3>
+                <button class="close-btn" onclick="toggleQuestJournal()">×</button>
+            </div>
+            <div class="quest-journal-content" id="quest-journal-content">
+                <p class="quest-empty">No quests yet. Your story awaits...</p>
+            </div>
+        </aside>
+
         <!-- Game Menu Modal -->
         <div class="modal hidden" id="game-menu-modal">
             <div class="modal-content">
                 <h3>Game Menu</h3>
                 <div class="modal-buttons">
+                    <button class="modal-btn" onclick="showRecap()">📖 Story Recap</button>
                     <button class="modal-btn" onclick="saveGame()">💾 Save Game</button>
                     <button class="modal-btn" onclick="loadGame()">📂 Load Game</button>
                     <button class="modal-btn" onclick="showSettings()">⚙️ Settings</button>
@@ -460,6 +543,10 @@
     <script src="js/combat.js"></script>
     <script src="js/dungeon-master.js"></script>
     <script src="js/voice.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/scene-fx.js"></script>
+    <script src="js/director.js"></script>
+    <script src="js/story-preview.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

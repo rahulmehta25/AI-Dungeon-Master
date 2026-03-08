@@ -116,6 +116,7 @@ const DungeonMaster = {
     // Call AI backend for dynamic response
     async callAI(playerInput) {
         try {
+            const recapContext = typeof Director !== 'undefined' ? Director.generateRecapContext() : '';
             const response = await fetch(`${this.apiEndpoint}/dm/respond`, {
                 method: 'POST',
                 headers: {
@@ -130,7 +131,8 @@ const DungeonMaster = {
                         currentEnemy: Combat.currentEnemy
                     },
                     character: Character.current,
-                    gameState: Storage.getGameState()
+                    gameState: Storage.getGameState(),
+                    recapContext
                 })
             });
             

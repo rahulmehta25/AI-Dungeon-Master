@@ -401,14 +401,7 @@ const Character = {
         Storage.saveGameState(gameState);
 
         console.log('✅ Character created:', this.current.name);
-        
-        // Start the game!
-        if (typeof startAdventure === 'function') {
-            startAdventure();
-        } else if (typeof initGameScreen === 'function') {
-            initGameScreen();
-        }
-        
+
         return this.current;
     },
 
@@ -444,7 +437,7 @@ const Character = {
         
         if (prevBtn) prevBtn.disabled = this.creationStep === 1;
         if (nextBtn) {
-            nextBtn.textContent = this.creationStep === this.maxSteps ? 'Begin Adventure →' : 'Next →';
+            nextBtn.textContent = this.creationStep === this.maxSteps ? 'Begin Story Preview →' : 'Next →';
         }
 
         // Update summary if on last step

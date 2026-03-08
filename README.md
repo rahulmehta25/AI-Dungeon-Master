@@ -1,161 +1,124 @@
-# 🐉 AI Dungeon Master
+# AI Dungeon Master
 
-A web-based D&D-style game where you talk TO characters, not control them with voice commands. Experience an immersive fantasy adventure with an AI Dungeon Master.
+A cinematic AI-powered D&D experience where you speak to characters, shape the world, and the AI drives the narrative as a living Game Director.
 
-![Version](https://img.shields.io/badge/version-1.0-gold)
+![Version](https://img.shields.io/badge/version-2.0-gold)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-## ✨ Features
+## What Makes This Different
 
-### 🎭 Character Creation
+The AI doesn't just chat — it **drives the game engine**. Every response from Claude returns both narrative text AND structured state patches (scene changes, quest updates, rewards, visual effects, suggested actions) that are applied to the game in real-time. The model controls the world.
+
+## Features
+
+### AI Game Director
+- **Structured AI Output** — Claude returns `<NARRATIVE>` + `<STATE_JSON>` that drives scene transitions, quests, rewards, and visual effects
+- **Suggested Action Chips** — AI generates contextual actions the player can click
+- **Story Recap** — AI-generated dramatic summary of your adventure so far
+- **Memory & Context** — Director module builds recap context so Claude remembers your journey
+
+### Cinematic Scene System
+- **Dynamic Backdrops** — CSS gradient-based scenes that change with location (tavern glow, forest fog, ruins wisps)
+- **Mood System** — Vignette intensity, color shifts, and particle effects respond to narrative mood
+- **Procedural Particles** — Embers, leaves, wisps, dust, and snow per scene
+- **One-Shot Effects** — Screen shake, flash, glow-burst, fog-roll triggered by the AI
+
+### Procedural Audio
+- **Ambient Soundscapes** — Web Audio API generates tavern crackling, forest wind, eerie ruins drone (no audio files)
+- **Sound Effects** — Dice rolls, hits, criticals, heals, level-ups, quest acquired — all procedurally synthesized
+- **Crossfade Transitions** — Smooth ambient audio transitions between scenes
+
+### Character Creation
 - **6 Races:** Human, Elf, Dwarf, Halfling, Dragonborn, Tiefling
 - **6 Classes:** Warrior, Mage, Rogue, Cleric, Ranger, Bard
 - **6 Backgrounds:** Noble, Soldier, Scholar, Outlander, Criminal, Acolyte
-- Stat rolling and equipment assignment
+- Stat rolling with race/class bonuses and equipment assignment
 
-### 🎲 Gameplay
-- **Natural Language Input:** Type or speak your actions
-- **Dice Rolling:** Visual d20 system with skill checks
-- **Combat System:** Attack, defend, and use abilities
-- **Exploration:** Multiple locations to discover
-- **NPCs:** Dynamic conversations with memorable characters
+### Gameplay
+- **Natural Language Input** — Type or speak your actions
+- **d20 Combat System** — Attack rolls, skill checks, saving throws, critical hits
+- **Quest Journal** — AI-driven quest tracking with active/completed/failed states
+- **Voice I/O** — Speech-to-text input + text-to-speech narration with per-NPC voice variations
 
-### 🗺️ Locations
-- The Weary Wanderer Tavern
-- Millbrook Town Square
-- The Darkwood Path
-- Ruins of Valdris
-- And more to discover...
-
-### 💾 Save System
-- Auto-save feature
-- Multiple save slots
-- Export/Import functionality
-
-### 🎨 Visual Design
-- Dark fantasy theme with gold accents
+### Visual Design
+- Glassmorphic message cards with backdrop blur
 - Three color themes (Dark Dungeon, Ancient Parchment, Midnight Blue)
-- Atmospheric particle effects
-- Animated dice rolls
+- Typewriter text reveal for DM responses
 - Responsive design for all devices
 
-### 🔊 Audio Features
-- Voice input via Web Speech API
-- Text-to-Speech for narrative (optional)
-- Adjustable volume controls
+## Tech Stack
 
-## 🚀 Quick Start
+- **Frontend:** Vanilla JavaScript (ES6+), CSS3 Custom Properties, Web Audio API, Web Speech API
+- **Backend:** Express.js + Claude API (Sonnet)
+- **Storage:** localStorage with save slots
+- **Audio:** 100% procedurally generated — zero audio files
 
-1. **Clone or download** this repository
-2. **Open a terminal** in the project folder
-3. **Start a local server:**
+## Quick Start
+
+1. Clone the repo
+2. Set up the server:
    ```bash
+   cd server
+   npm install
+   cp .env.example .env
+   # Add your ANTHROPIC_API_KEY to .env
+   npm start
+   ```
+3. Serve the frontend:
+   ```bash
+   # From project root
    python3 -m http.server 8080
    ```
-4. **Open your browser** to `http://localhost:8080`
-5. **Start your adventure!**
+4. Open `http://localhost:8080`
 
-## 🎮 How to Play
+## Architecture
 
-### Basic Commands
-- `look around` - Describe your surroundings
-- `talk to [NPC]` - Start a conversation
-- `go to [location]` - Travel somewhere
-- `attack [target]` - Enter combat
-- `search` - Look for items or secrets
-- `rest` - Recover health
-- `inventory` - Check your items
-
-### Quick Actions
-Use the quick action buttons for common commands:
-- 👁️ **Look** - Examine surroundings
-- 🎒 **Inventory** - Check your items
-- 🎲 **Roll d20** - Make a dice roll
-
-### Combat
-Combat uses the classic d20 system:
-- Roll to hit vs. enemy AC
-- Natural 20 = Critical Hit!
-- Natural 1 = Critical Fail!
-- Defeat enemies to gain XP and level up
-
-### Voice Input
-Click the 🎤 button or press and hold to speak your commands.
-
-## ⚙️ Settings
-
-Access settings from the main menu or in-game:
-- **Music/SFX Volume** - Audio levels
-- **Text-to-Speech** - Hear the DM narrate
-- **Theme** - Choose your visual style
-- **Text Size** - Accessibility options
-- **Animations** - Toggle visual effects
-- **Difficulty** - Story Mode, Normal, Hardcore
-- **Auto-Save** - Save automatically
-
-## 🛠️ Technical Details
-
-### Tech Stack
-- Vanilla JavaScript (ES6+)
-- CSS3 with Custom Properties
-- Web Speech API
-- localStorage for saves
-
-### File Structure
 ```
 AI-Dungeon-Master/
-├── index.html          # Main HTML
+├── index.html              # Main HTML
 ├── css/
-│   ├── styles.css      # Main styles
-│   └── animations.css  # Animations
+│   ├── styles.css          # Main styles + themes
+│   └── animations.css      # Animations + effects
 ├── js/
-│   ├── app.js          # Main app logic
-│   ├── storage.js      # Save/load system
-│   ├── character.js    # Character management
-│   ├── combat.js       # Combat & dice
-│   ├── dungeon-master.js # AI narrative
-│   └── voice.js        # Speech API
-├── README.md
-└── ACTIVITY_LOG.md     # Development log
+│   ├── app.js              # Main app logic + UI management
+│   ├── storage.js           # Save/load system (localStorage)
+│   ├── character.js         # Character creation + management
+│   ├── combat.js            # Dice rolling + combat mechanics
+│   ├── dungeon-master.js    # AI narrative engine + NPC system
+│   ├── director.js          # AI structured output parser + state patcher
+│   ├── scene-fx.js          # Dynamic backdrops + visual effects
+│   ├── audio.js             # Procedural ambient audio + SFX
+│   └── voice.js             # Speech recognition + TTS
+├── server/
+│   ├── server.js            # Express + Claude API proxy
+│   └── package.json
+└── README.md
 ```
 
-### Browser Support
-- Chrome (recommended)
-- Firefox
-- Safari
-- Edge
+## How the AI Game Director Works
 
-Voice input requires browser support for Web Speech API.
-
-## 🎯 Debug Commands
-
-Open the browser console and use:
-```javascript
-DEBUG.character()     // View character data
-DEBUG.gameState()     // View game state
-DEBUG.giveXP(100)     // Add experience
-DEBUG.heal()          // Full heal
-DEBUG.spawnEnemy('goblin')  // Spawn enemy
-DEBUG.teleport('forest_path') // Change location
+```
+Player Input → DungeonMaster.generateResponse()
+                    ↓
+              Claude API (with recap context)
+                    ↓
+              <NARRATIVE> + <STATE_JSON>
+                    ↓
+              Director.parseResponse()
+                    ↓
+        ┌───────────┼───────────┐
+    Narrative    State Patch   Actions
+        ↓           ↓           ↓
+    Story UI    SceneFX      Action Chips
+                AudioManager
+                Quest Journal
+                Rewards/XP
 ```
 
-## 📝 Development
+## License
 
-See `ACTIVITY_LOG.md` for the full development history.
-
-### Future Ideas
-- [ ] Music and sound effects
-- [ ] More locations and quests
-- [ ] Party system
-- [ ] Multiplayer support
-- [ ] Custom character portraits
-- [ ] Item crafting
-- [ ] Spell system for mages
-
-## 📜 License
-
-MIT License - Feel free to use, modify, and distribute!
+MIT License
 
 ---
 
-*Crafted with magic and code* ✨
+*Built for hackathon. Powered by Claude.*

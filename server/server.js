@@ -29,7 +29,7 @@ const DM_SYSTEM_PROMPT = `You are an expert Dungeon Master for a fantasy rolepla
 4. **Keep it flowing**: End responses with something that invites action - a question, a tension, a choice.
 5. **Remember context**: Reference past events, NPCs they've met, choices they've made.
 
-**Format Guidelines:**
+**Narrative Guidelines:**
 - Use **bold** for important names, items, or dramatic moments
 - Use *italics* for descriptions and atmosphere
 - Keep responses 2-4 paragraphs max - punchy and engaging
@@ -38,16 +38,39 @@ const DM_SYSTEM_PROMPT = `You are an expert Dungeon Master for a fantasy rolepla
 
 **World Details:**
 - Setting: The town of Millbrook on the edge of the Darkwood forest
-- Main locations: The Weary Wanderer tavern, town square, ancient ruins, goblin camp
+- Main locations: The Weary Wanderer tavern, town square, forest path, ancient ruins, goblin camp, underground tomb
 - Key NPCs: Greta (innkeeper), mysterious hooded figure (quest giver), Captain Helena (guard), Archmage Valdris (ghost)
 - Main plot: An ancient evil called "The Whispering Dark" stirs in the ruins
 
-You are NOT an assistant. You are the world itself, responding to the player's actions.`;
+You are NOT an assistant. You are the world itself, responding to the player's actions.
+
+**RESPONSE FORMAT (MANDATORY):**
+You MUST ALWAYS respond with exactly TWO sections in this format:
+
+<NARRATIVE>
+Your markdown narrative for the player goes here. This is what the player sees.
+</NARRATIVE>
+
+<STATE_JSON>
+{JSON object with game state changes}
+</STATE_JSON>
+
+**STATE_JSON keys (include ONLY keys that changed):**
+- "scene" (string) - new scene ID if the player moves locations. One of: intro, tavern, town_square, forest_path, ancient_ruins, goblin_camp, underground_tomb
+- "mood" (string) - emotional tone of the moment: calm, tense, combat, mysterious, celebratory
+- "suggestedActions" (array of 2-4 strings) - what the player might do next
+- "questUpdate" (object) - quest progress with keys: id, title, objective, status
+- "rewards" (object) - rewards earned with keys: xp (number), gold (number), items (array of strings)
+- "npcMood" (object) - NPC dispositions, e.g. {"Greta": "friendly", "Helena": "suspicious"}
+- "fx" (array of strings) - visual effects to trigger. Options: shake, flash, glow-burst, fog-roll
+- "musicPreset" (string) - ambient audio preset: tavern, town, forest, ruins, combat, camp
+
+IMPORTANT: Always include "suggestedActions" with 2-4 options. Only include other keys when something actually changed. The JSON must be valid.`;
 
 // Generate DM response endpoint
 app.post('/api/dm/respond', async (req, res) => {
     try {
-        const { playerInput, context, character, gameState } = req.body;
+        const { playerInput, context, character, gameState, recapContext } = req.body;
 
         if (!playerInput) {
             return res.status(400).json({ error: 'Player input is required' });
@@ -80,6 +103,9 @@ app.post('/api/dm/respond', async (req, res) => {
         if (context?.currentEnemy) {
             contextInfo += `\n[IN COMBAT WITH: ${context.currentEnemy.name}, HP: ${context.currentEnemy.hp}/${context.currentEnemy.maxHp}]`;
         }
+        if (recapContext) {
+            contextInfo += `\n[ADVENTURE RECAP: ${recapContext}]`;
+        }
 
         // Add the current player input
         const userMessage = contextInfo 
@@ -93,7 +119,7 @@ app.post('/api/dm/respond', async (req, res) => {
 
         // Call Claude API
         const response = await anthropic.messages.create({
-            model: 'claude-3-haiku-20240307',
+            model: 'claude-sonnet-4-20250514',
             max_tokens: 1024,
             system: DM_SYSTEM_PROMPT,
             messages: messages
@@ -140,7 +166,7 @@ ${context || ''}
 Keep it visceral and exciting. No dice numbers in the narration itself.`;
 
         const response = await anthropic.messages.create({
-            model: 'claude-3-haiku-20240307',
+            model: 'claude-sonnet-4-20250514',
             max_tokens: 256,
             system: 'You are a combat narrator for a fantasy RPG. Be dramatic, visceral, and concise.',
             messages: [{
@@ -180,7 +206,7 @@ ${details ? `Additional details: ${details}` : ''}
 Engage all senses. Make it immersive. End with something that hints at possibilities.`;
 
         const response = await anthropic.messages.create({
-            model: 'claude-3-haiku-20240307',
+            model: 'claude-sonnet-4-20250514',
             max_tokens: 512,
             system: 'You are a fantasy world narrator. Create vivid, atmospheric descriptions.',
             messages: [{
@@ -198,6 +224,61 @@ Engage all senses. Make it immersive. End with something that hints at possibili
 
     } catch (error) {
         console.error('Error generating description:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            fallback: true
+        });
+    }
+});
+
+// Generate adventure recap endpoint
+app.post('/api/dm/recap', async (req, res) => {
+    try {
+        const { history, character, gameState } = req.body;
+
+        let recapPrompt = 'Write a dramatic 2-3 paragraph recap of this adventure so far. Write it like a narrator summarizing an epic tale — past tense, vivid, highlighting key moments and choices.\n\n';
+
+        if (character) {
+            recapPrompt += `Hero: ${character.name}, a Level ${character.level} ${character.race} ${character.class}.\n`;
+        }
+        if (gameState?.currentScene) {
+            recapPrompt += `Current location: ${gameState.currentScene}\n`;
+        }
+
+        if (history && Array.isArray(history) && history.length > 0) {
+            recapPrompt += '\nAdventure events:\n';
+            for (const entry of history) {
+                if (entry.role === 'user') {
+                    recapPrompt += `- Player: ${entry.content}\n`;
+                } else if (entry.role === 'assistant') {
+                    const truncated = entry.content.length > 200 ? entry.content.slice(0, 200) + '...' : entry.content;
+                    recapPrompt += `- DM: ${truncated}\n`;
+                }
+            }
+        }
+
+        recapPrompt += '\nSummarize the adventure dramatically. Focus on the hero\'s journey, choices made, and where things stand now.';
+
+        const response = await anthropic.messages.create({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 1024,
+            system: 'You are an epic fantasy narrator. Write dramatic, compelling recaps of adventures in 2-3 paragraphs. Past tense, vivid imagery, focus on key moments.',
+            messages: [{
+                role: 'user',
+                content: recapPrompt
+            }]
+        });
+
+        const recap = response.content[0]?.text || 'The tale so far remains shrouded in mystery...';
+
+        res.json({
+            success: true,
+            recap: recap
+        });
+
+    } catch (error) {
+        console.error('Error generating recap:', error);
         res.status(500).json({
             success: false,
             error: error.message,

@@ -9,6 +9,7 @@
 let currentScreen = 'main-menu';
 let previousScreen = 'main-menu';
 let isProcessing = false;
+let audioEnabled = false;
 
 // ========================================
 // Initialization
@@ -34,6 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         document.getElementById('continue-btn').disabled = true;
     }
+
+    syncAudioToggleUI();
     
     console.log('✅ AI Dungeon Master ready!');
 });
@@ -72,6 +75,9 @@ function goBack() {
 // Main Menu Actions
 // ========================================
 function startNewGame() {
+    if (typeof stopStoryPreview === 'function') {
+        stopStoryPreview();
+    }
     showScreen('character-creation');
     Character.startCreation();
 }
@@ -96,11 +102,12 @@ function loadGame() {
             // Load story history
             const history = Storage.getStoryHistory();
             
-            // Initialize game screen
             initGameScreen();
-            
-            // Restore story history
             restoreStoryHistory(history);
+            
+            if (typeof SceneFX !== 'undefined') {
+                SceneFX.apply(DungeonMaster.currentScene || 'intro', 'calm');
+            }
             
             showScreen('game-screen');
             showToast('Adventure resumed!', 'success');
@@ -120,13 +127,14 @@ function showSettings() {
 // Character Creation
 // ========================================
 function nextCreationStep() {
-    console.log('📍 nextCreationStep called, step:', Character.creationStep, '/', Character.maxSteps);
     const wasLastStep = Character.creationStep === Character.maxSteps;
     const result = Character.nextStep();
-    console.log('📍 nextStep returned:', result, 'wasLastStep:', wasLastStep);
     if (result && wasLastStep) {
-        console.log('📍 Calling startAdventure...');
-        startAdventure();
+        if (typeof startStoryPreview === 'function') {
+            startStoryPreview();
+        } else {
+            startAdventure();
+        }
     }
 }
 
@@ -135,20 +143,30 @@ function prevCreationStep() {
 }
 
 function startAdventure() {
-    console.log('🚀 startAdventure() called!');
+    if (typeof stopStoryPreview === 'function') {
+        stopStoryPreview();
+    }
+
+    const container = document.getElementById('story-content');
+    if (container) {
+        container.innerHTML = '';
+    }
+
     showLoading('Summoning the Dungeon Master...');
     
     setTimeout(() => {
         initGameScreen();
         
-        // Add intro narrative
         const intro = DungeonMaster.getIntroNarrative();
         addStoryMessage('dm', intro);
+        
+        if (typeof SceneFX !== 'undefined') {
+            SceneFX.apply('intro', 'calm');
+        }
         
         showScreen('game-screen');
         showToast('Your adventure begins!', 'success');
         
-        // Auto-save
         saveGame(true);
     }, 1500);
 }
@@ -267,29 +285,38 @@ async function sendMessage() {
     input.value = '';
     input.style.height = 'auto';
     
-    // Add player message
+    if (typeof Director !== 'undefined') {
+        Director.clearSuggestedActions();
+    }
+    
     addStoryMessage('player', message);
     Storage.addToStoryHistory({ type: 'player', text: message });
     
-    // Show typing indicator
     const typingId = addTypingIndicator();
     
     try {
-        // Generate DM response
-        const response = await DungeonMaster.generateResponse(message);
-        
-        // Remove typing indicator
+        const rawResponse = await DungeonMaster.generateResponse(message);
         removeTypingIndicator(typingId);
         
-        // Add DM response with typing effect
-        await addStoryMessageAnimated('dm', response);
-        
-        // Speak response if TTS enabled
-        if (Voice.settings.enabled) {
-            Voice.speakAsDM(response);
+        let narrative = rawResponse;
+        if (typeof Director !== 'undefined') {
+            const parsed = Director.parseResponse(rawResponse);
+            narrative = parsed.narrative;
+            if (parsed.state) {
+                Director.applyStatePatch(parsed.state);
+            }
         }
         
-        // Auto-save if enabled
+        await addStoryMessageAnimated('dm', narrative);
+        
+        if (audioEnabled && typeof AudioManager !== 'undefined') {
+            AudioManager.playSFX('save');
+        }
+        
+        if (Voice.settings.enabled) {
+            Voice.speakAsDM(narrative);
+        }
+        
         const settings = Storage.getSettings();
         if (settings.autosaveEnabled) {
             saveGame(true);
@@ -448,6 +475,7 @@ function quickAction(action) {
 }
 
 async function rollDice(sides = 20) {
+    if (audioEnabled && typeof AudioManager !== 'undefined') AudioManager.playSFX('dice-roll');
     const roll = Combat.roll(sides);
     await Combat.showDiceRoll(sides, roll.total);
     addStoryMessage('roll', `
@@ -466,6 +494,99 @@ function toggleCharacterSheet() {
         sheet.classList.toggle('hidden');
         sheet.classList.toggle('visible');
         updateCharacterSheet();
+    }
+}
+
+// ========================================
+// Quest Journal
+// ========================================
+function toggleQuestJournal() {
+    const sidebar = document.getElementById('quest-journal-sidebar');
+    if (!sidebar) return;
+    sidebar.classList.toggle('hidden');
+    sidebar.classList.toggle('visible');
+
+    if (sidebar.classList.contains('visible') && typeof Director !== 'undefined') {
+        const content = document.getElementById('quest-journal-content');
+        if (content) {
+            const quests = Director.getQuests();
+            if (quests.length === 0) {
+                content.innerHTML = '<p class="quest-empty">No quests yet. Your story awaits...</p>';
+            } else {
+                content.innerHTML = Director.renderQuestJournal();
+            }
+        }
+    }
+}
+
+// ========================================
+// Story Recap
+// ========================================
+async function showRecap() {
+    hideGameMenu();
+
+    const typingId = addTypingIndicator();
+
+    try {
+        const response = await fetch(`${DungeonMaster.apiEndpoint}/dm/recap`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                history: DungeonMaster.conversationHistory,
+                character: Character.current,
+                gameState: Storage.getGameState()
+            })
+        });
+
+        removeTypingIndicator(typingId);
+
+        const data = await response.json();
+        if (data.success && data.recap) {
+            addStoryMessage('dm', `# Story Recap\n\n${data.recap}`);
+        } else {
+            addStoryMessage('system', 'The chronicler is unavailable...');
+        }
+    } catch (error) {
+        removeTypingIndicator(typingId);
+        addStoryMessage('system', 'Could not reach the chronicler.');
+    }
+}
+
+// ========================================
+// Audio Toggle
+// ========================================
+function toggleAudio() {
+    audioEnabled = !audioEnabled;
+    syncAudioToggleUI();
+
+    if (audioEnabled && typeof AudioManager !== 'undefined') {
+        AudioManager.ensureContext();
+        const scene = DungeonMaster.currentScene || 'intro';
+        const sceneToPreset = {
+            intro: 'tavern', tavern: 'tavern',
+            town_square: 'town', forest_path: 'forest',
+            ancient_ruins: 'ruins', goblin_camp: 'camp',
+            underground_tomb: 'ruins'
+        };
+        AudioManager.playAmbient(sceneToPreset[scene] || 'tavern');
+    } else if (typeof AudioManager !== 'undefined') {
+        AudioManager.stopAmbient();
+    }
+}
+
+function syncAudioToggleUI() {
+    const headerBtn = document.getElementById('audio-toggle-btn');
+    if (headerBtn) {
+        headerBtn.textContent = audioEnabled ? '🔊' : '🔇';
+    }
+
+    const menuIcon = document.getElementById('menu-audio-icon');
+    const menuLabel = document.getElementById('menu-audio-label');
+    if (menuIcon) {
+        menuIcon.textContent = audioEnabled ? '🔊' : '🔇';
+    }
+    if (menuLabel) {
+        menuLabel.textContent = audioEnabled ? 'Ambient Audio On' : 'Ambient Audio Off';
     }
 }
 
@@ -510,6 +631,7 @@ function saveGame(silent = false) {
     if (save) {
         if (!silent) {
             showToast('Game saved!', 'success');
+            if (audioEnabled && typeof AudioManager !== 'undefined') AudioManager.playSFX('save');
         }
         console.log('💾 Game saved:', save.name);
     } else {
@@ -609,11 +731,15 @@ function setupEventListeners() {
     
     // Settings changes
     document.getElementById('music-volume')?.addEventListener('input', (e) => {
-        Storage.updateSetting('musicVolume', parseInt(e.target.value));
+        const val = parseInt(e.target.value);
+        Storage.updateSetting('musicVolume', val);
+        if (typeof AudioManager !== 'undefined') AudioManager.setMusicVolume(val / 100);
     });
     
     document.getElementById('sfx-volume')?.addEventListener('input', (e) => {
-        Storage.updateSetting('sfxVolume', parseInt(e.target.value));
+        const val = parseInt(e.target.value);
+        Storage.updateSetting('sfxVolume', val);
+        if (typeof AudioManager !== 'undefined') AudioManager.setSFXVolume(val / 100);
     });
     
     document.getElementById('tts-enabled')?.addEventListener('change', (e) => {
@@ -646,12 +772,15 @@ function setupEventListeners() {
     
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
-        // Escape to close modals
         if (e.key === 'Escape') {
             hideGameMenu();
             const sheet = document.getElementById('character-sheet');
             if (sheet && sheet.classList.contains('visible')) {
                 toggleCharacterSheet();
+            }
+            const journal = document.getElementById('quest-journal-sidebar');
+            if (journal && journal.classList.contains('visible')) {
+                toggleQuestJournal();
             }
         }
         
