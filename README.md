@@ -251,3 +251,64 @@ MIT License
 ---
 
 Built by [Rahul Mehta](https://github.com/rahulmehta25)
+
+## System Architecture Diagram
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    participant User
+    participant WebSpeech as Web Speech API
+    participant React as React Frontend
+    participant Claude as Claude API
+    participant D20 as d20 Combat State Machine
+    participant WebAudio as Web Audio API
+
+    User->>WebSpeech: Speaks input
+    WebSpeech->>WebSpeech: Transcribe audio to text
+    WebSpeech->>React: onResult(transcript)
+
+    React->>React: Build prompt with game context
+    React->>Claude: POST /api/generate {prompt, history}
+
+    Claude->>Claude: Process narrative request
+    Claude-->>React: {NARRATIVE, STATE_JSON}
+
+    React->>React: Parse STATE_JSON
+    React->>React: Update UI (narrative, inventory, map)
+
+    React->>WebAudio: updateAmbience(state.environment)
+    WebAudio->>WebAudio: Adjust procedural audio<br/>(reverb, filters, oscillators)
+
+    alt Combat Active (state.inCombat === true)
+        React->>D20: initiateCombatRound(state.enemies)
+        D20->>D20: Roll initiative (d20 + DEX mod)
+        D20->>D20: Determine turn order
+
+        loop Each Combatant Turn
+            D20->>React: requestAction(combatant)
+
+            alt Player Turn
+                React->>WebSpeech: Enable voice input
+                WebSpeech-->>React: Player action transcript
+                React->>D20: submitAction(action)
+            else Enemy Turn
+                D20->>D20: AI selects action
+            end
+
+            D20->>D20: Roll attack (d20 + modifiers)
+            D20->>D20: Calculate damage / effects
+            D20->>React: combatUpdate(results)
+            React->>React: Animate combat results
+            React->>WebAudio: playSFX(results.type)
+        end
+
+        D20->>D20: Check combat end conditions
+        D20-->>React: combatResolved(outcome)
+    end
+
+    React->>WebSpeech: Speak NARRATIVE (TTS)
+    WebSpeech->>User: Audio output
+```
+
